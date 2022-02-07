@@ -1,6 +1,8 @@
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <string>
+#include <unistd.h>
 
 /***
  * Creates a socket server
@@ -9,17 +11,22 @@
  */
 int create_server(int port);
 
-void run_server();
+/***
+ * Runs a socket server
+ * @param socket Server socket descriptor
+ */
+void run_server(int socket);
 
 int main()
 {
-    const int PORT = 99999;
+    const int PORT = 8888;
 
     int socket = create_server(PORT);
     if (socket == 0)
         exit(EXIT_FAILURE);
+    std::cout << "Server was successfully created\n";
 
-    run_server();
+    run_server(socket);
 
     return 0;
 }
@@ -54,3 +61,20 @@ int create_server(int port)
     return server_sock;
 }
 
+void run_server(int socket)
+{
+    int client_sock;
+    while (true)
+    {
+        client_sock = accept(socket, NULL, NULL);
+        if (client_sock == 0)
+        {
+            perror("Error while accepting socket request");
+            return;
+        }
+
+        char req_buffer[2048];
+        read(client_sock, &req_buffer, 2048);
+        std::string request = req_buffer;
+    }
+}
