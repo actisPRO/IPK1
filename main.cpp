@@ -3,6 +3,11 @@
 #include <netinet/in.h>
 #include <string>
 #include <unistd.h>
+#include <sstream>
+#include <iostream>
+#include <vector>
+
+using namespace std;
 
 /***
  * Creates a socket server
@@ -12,10 +17,14 @@
 int create_server(int port);
 
 /***
- * Runs a socket server
- * @param socket Server socket descriptor
+ * Runs a server_socket server
+ * @param server_socket Server server_socket descriptor
  */
-void run_server(int socket);
+void run_server(int server_socket);
+
+void parse_request(int client_socket);
+
+vector<string> split(const string& input, char delim);
 
 int main()
 {
@@ -61,20 +70,38 @@ int create_server(int port)
     return server_sock;
 }
 
-void run_server(int socket)
+void run_server(int server_socket)
 {
-    int client_sock;
+    int client_socket;
     while (true)
     {
-        client_sock = accept(socket, NULL, NULL);
-        if (client_sock == 0)
+        client_socket = accept(server_socket, NULL, NULL);
+        if (client_socket == 0)
         {
-            perror("Error while accepting socket request");
+            perror("Error while accepting server_socket request");
             return;
         }
 
-        char req_buffer[2048];
-        read(client_sock, &req_buffer, 2048);
-        std::string request = req_buffer;
+        parse_request(client_socket);
     }
+}
+
+void parse_request(int client_socket)
+{
+    char buffer[2048] = {0};
+    read(client_socket, buffer, 2048);
+    vector<string> request = split((string) buffer, '\n');
+
+    cout << request[0];
+}
+
+vector<string> split(const string& input, char delim)
+{
+    vector<string> result;
+    istringstream in(input);
+    string out;
+    while (std::getline(in, out, delim))
+        result.push_back(out);
+
+    return result;
 }
