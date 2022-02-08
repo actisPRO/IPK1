@@ -142,7 +142,7 @@ int create_server(int port)
         return 0;
     }
 
-    if (listen(server_sock, 3) < 0)
+    if (listen(server_sock, 10) < 0)
     {
         perror("Listen failed");
         return 0;
@@ -209,12 +209,25 @@ string get_cpu_name()
     return cpu_name;
 }
 
+int g_OldLoad = 0;
+int get_load()
+{
+    char cpu_load_buffer[512] = { 0 };
+    FILE* fp = popen("head -n1 /proc/stat", "r");
+    if (fgets(cpu_load_buffer, sizeof cpu_load_buffer, fp) == nullptr)
+        return -1;
+    pclose(fp);
+
+    vector<string> cpu_data = split(((string)cpu_load_buffer), ' ');
+    cout << cpu_data[0] << endl;
+}
+
 string generate_response(const string& content)
 {
     size_t content_length = content.length();
     string response = "HTTP/1.1 200 OK\n"
                       "Content-Type: text/plain\n"
-                      "Content-Length: " + to_string(content_length) + "\r\n\n" + content + "\n";
+                      "Content-Length: " + to_string(content_length) + "\r\n\n" + content;
     return response;
 }
 
