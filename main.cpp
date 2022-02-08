@@ -12,7 +12,7 @@ using namespace std;
 enum RequestType
 {
     UNKNOWN_REQUEST,
-    INVALID_REQUEST,
+    INVALID_RESOURCE,
     HOST_NAME,
     CPU_NAME,
     LOAD
@@ -31,8 +31,19 @@ int create_server(int port);
  */
 void run_server(int server_socket);
 
+/***
+ * Gets data from the client socket and returns the type of the requested resource
+ * @param client_socket Client socket
+ * @return Type of the requested resource or UNKNOWN_REQUEST
+ */
 RequestType read_and_get_request_type(int client_socket);
 
+/***
+ * Splits the specified string
+ * @param input String to split
+ * @param delim Delimiter used for splitting
+ * @return Vector which contains substrings
+ */
 vector<string> split(const string& input, char delim);
 
 int main()
@@ -42,8 +53,9 @@ int main()
     int socket = create_server(PORT);
     if (socket == 0)
         exit(EXIT_FAILURE);
-    std::cout << "Server was successfully created\n";
 
+    cout << "Server listening on port ";
+    cout << PORT << endl;
     run_server(socket);
 
     return 0;
@@ -98,7 +110,7 @@ void run_server(int server_socket)
         case UNKNOWN_REQUEST:
             strcpy(response, "HTTP/1.1 404 Not found\n");
             break;
-        case INVALID_REQUEST:
+        case INVALID_RESOURCE:
             cout << "Incorrect resource was requested" << endl;
             strcpy(response, "HTTP/1.1 404 Not found\n");
             break;
@@ -137,7 +149,7 @@ RequestType read_and_get_request_type(int client_socket)
     else if (requested_resource == "/load")
         return LOAD;
     else
-        return INVALID_REQUEST;
+        return INVALID_RESOURCE;
 }
 
 vector<string> split(const string& input, char delim)
