@@ -44,6 +44,12 @@ void run_server(int server_socket);
  */
 RequestType read_and_get_request_type(int client_socket);
 
+string get_hostname();
+
+string get_cpu_name();
+
+int get_load();
+
 /***
  * Sends an HTTP response to the client
  * @param client_socket Client socket
@@ -166,6 +172,37 @@ RequestType read_and_get_request_type(int client_socket)
         return INVALID_RESOURCE;
 }
 
+string get_hostname()
+{
+    char hostname[256] = { 0 };
+    gethostname(hostname, sizeof hostname);
+    string result = hostname;
+    return result + '\n';
+}
+
+string get_cpu_name()
+{
+    char cpu_name[512] = { 0 };
+
+    FILE* fp = popen("lscpu | sed -nr '/Model name/ s/.*:\\s*(.*) @ .*/\\1/p' | sed ':a;s/  / /;ta'", "r");
+    if (fgets(cpu_name, sizeof cpu_name, fp) == nullptr)
+    {
+        return "Can't determine CPU name";
+    };
+    pclose(fp);
+
+    return cpu_name;
+}
+
+string generate_response(const string& content)
+{
+    size_t content_length = content.length();
+    string response = "HTTP/1.1 200 OK\n"
+                      "Content-Type: text/plain\n"
+                      "Content-Length: " + to_string(content_length) + "\r\n\n" + content + "\n";
+    return response;
+}
+
 void send_response(int client_socket, RequestType request_type)
 {
     char response[1024] = { 0 };
@@ -185,31 +222,16 @@ void send_response(int client_socket, RequestType request_type)
     case HOST_NAME:
     {
         cout << "Host name was requested" << endl;
-        char hostname[256] = { 0 };
-        gethostname(hostname, sizeof hostname);
-
-        size_t content_length = strlen(hostname) + 1;
-        string response_buffer = "HTTP/1.1 200 OK\n"
-                                 "Content-Type: text/plain\n"
-                                 "Content-Length: " + to_string(content_length) + "\r\n\n" + hostname + "\n";
-
+        string hostname = get_hostname();
+        string response_buffer = generate_response(hostname);
         strcpy(response, response_buffer.c_str());
         break;
     }
     case CPU_NAME:
     {
         cout << "CPU name was requested" << endl;
-        char cpu_name[512] = { 0 };
-
-        FILE* fp = popen("lscpu | sed -nr '/Model name/ s/.*:\\s*(.*) @ .*/\\1/p' | sed ':a;s/  / /;ta'", "r");
-        fgets(cpu_name, sizeof cpu_name, fp); // TODO: check if empty
-        pclose(fp);
-
-        size_t content_length = strlen(cpu_name);
-        string response_buffer = "HTTP/1.1 200 OK\n"
-                                 "Content-Type: text/plain\n"
-                                 "Content-Length: " + to_string(content_length) + "\r\n\n" + cpu_name + "\n";
-
+        string cpu_name = get_cpu_name();
+        string response_buffer = generate_response(cpu_name);
         strcpy(response, response_buffer.c_str());
         break;
     }
