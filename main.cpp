@@ -34,9 +34,12 @@ void run_server(int server_socket);
 /***
  * Gets data from the client socket and returns the type of the requested resource
  * @param client_socket Client socket
- * @return Type of the requested resource or UNKNOWN_REQUEST
+ * @return Type of the requested resource or UNKNOWN_REQUEST if the request is not a correct HTTP request or INVALID_RESOURCE
+ * if the resource can't be found
  */
 RequestType read_and_get_request_type(int client_socket);
+
+void send_response(int client_socket, RequestType request_type);
 
 /***
  * Splits the specified string
@@ -104,30 +107,7 @@ void run_server(int server_socket)
         }
 
         RequestType req = read_and_get_request_type(client_socket);
-        char response[1024] = {0};
-        switch (req)
-        {
-        case UNKNOWN_REQUEST:
-            strcpy(response, "HTTP/1.1 404 Not found\n");
-            break;
-        case INVALID_RESOURCE:
-            cout << "Incorrect resource was requested" << endl;
-            strcpy(response, "HTTP/1.1 404 Not found\n");
-            break;
-        case HOST_NAME:
-            cout << "Host name was requested" << endl;
-            strcpy(response, "HTTP/1.1 200 OK\n");
-            break;
-        case CPU_NAME:
-            cout << "CPU name was requested" << endl;
-            strcpy(response, "HTTP/1.1 200 OK\n");
-            break;
-        case LOAD:
-            cout << "System load was requested" << endl;
-            strcpy(response, "HTTP/1.1 200 OK\n");
-            break;
-        }
-        send(client_socket, response, strlen(response), 0);
+        send_response(client_socket, req);
         close(client_socket);
     }
 }
@@ -150,6 +130,62 @@ RequestType read_and_get_request_type(int client_socket)
         return LOAD;
     else
         return INVALID_RESOURCE;
+}
+
+void send_response(int client_socket, RequestType request_type)
+{
+    char response[1024] = { 0 };
+    switch (request_type)
+    {
+    case UNKNOWN_REQUEST:
+    {
+        strcpy(response, "HTTP/1.1 404 Not found\n");
+        break;
+    }
+    case INVALID_RESOURCE:
+    {
+        cout << "Incorrect resource was requested" << endl;
+        strcpy(response, "HTTP/1.1 404 Not found\n");
+        break;
+    }
+    case HOST_NAME:
+    {
+        cout << "Host name was requested" << endl;
+        char hostname[256] = {0};
+        gethostname(hostname, sizeof hostname);
+        size_t content_length = strlen(hostname);
+
+        string response_buffer = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: "
+                + to_string(content_length) + "\r\n\n" + hostname;
+
+        strcpy(response, response_buffer.c_str());
+        break;
+    }
+    case CPU_NAME:
+    {
+        cout << "CPU name was requested" << endl;
+        strcat(response, "\nHTTP/1.1 200 OK\nContent-Type: text/plain\n");
+        break;
+    }
+    case LOAD:
+    {
+        cout << "System load was requested" << endl;
+        strcat(response, "\nHTTP/1.1 200 OK\nContent-Type: text/plain\n");
+        break;
+    }
+    }
+
+    send(client_socket, response, strlen(response), 0);
+}
+
+string cpu_name()
+{
+
+}
+
+int load()
+{
+
 }
 
 vector<string> split(const string& input, char delim)
