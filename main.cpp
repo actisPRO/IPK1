@@ -4,10 +4,19 @@
 #include <string>
 #include <unistd.h>
 #include <sstream>
-#include <iostream>
 #include <vector>
+#include <cstring>
 
 using namespace std;
+
+enum RequestType
+{
+    UNKNOWN_REQUEST,
+    INVALID_REQUEST,
+    HOST_NAME,
+    CPU_NAME,
+    LOAD
+};
 
 /***
  * Creates a socket server
@@ -22,7 +31,7 @@ int create_server(int port);
  */
 void run_server(int server_socket);
 
-void parse_request(int client_socket);
+RequestType read_and_get_request_type(int client_socket);
 
 vector<string> split(const string& input, char delim);
 
@@ -82,17 +91,53 @@ void run_server(int server_socket)
             return;
         }
 
-        parse_request(client_socket);
+        RequestType req = read_and_get_request_type(client_socket);
+        char response[1024] = {0};
+        switch (req)
+        {
+        case UNKNOWN_REQUEST:
+            strcpy(response, "HTTP/1.1 404 Not found\n");
+            break;
+        case INVALID_REQUEST:
+            cout << "Incorrect resource was requested" << endl;
+            strcpy(response, "HTTP/1.1 404 Not found\n");
+            break;
+        case HOST_NAME:
+            cout << "Host name was requested" << endl;
+            strcpy(response, "HTTP/1.1 200 OK\n");
+            break;
+        case CPU_NAME:
+            cout << "CPU name was requested" << endl;
+            strcpy(response, "HTTP/1.1 200 OK\n");
+            break;
+        case LOAD:
+            cout << "System load was requested" << endl;
+            strcpy(response, "HTTP/1.1 200 OK\n");
+            break;
+        }
+        send(client_socket, response, strlen(response), 0);
+        close(client_socket);
     }
 }
 
-void parse_request(int client_socket)
+RequestType read_and_get_request_type(int client_socket)
 {
-    char buffer[2048] = {0};
+    char buffer[2048] = { 0 };
     read(client_socket, buffer, 2048);
-    vector<string> request = split((string) buffer, '\n');
+    if (buffer[0] == 0) return UNKNOWN_REQUEST;
 
-    cout << request[0];
+    vector<string> request = split((string)buffer, '\n');
+    if (request[0].find("GET", 0) == string::npos) return UNKNOWN_REQUEST;
+
+    string requested_resource = split(request[0], ' ')[1];
+    if (requested_resource == "/hostname")
+        return HOST_NAME;
+    else if (requested_resource == "/cpu-name")
+        return CPU_NAME;
+    else if (requested_resource == "/load")
+        return LOAD;
+    else
+        return INVALID_REQUEST;
 }
 
 vector<string> split(const string& input, char delim)
