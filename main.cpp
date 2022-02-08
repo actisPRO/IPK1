@@ -112,6 +112,13 @@ int create_server(int port)
         return 0;
     }
 
+    int opt = 1;
+    if (setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof opt))
+    {
+        perror("Setting socket option failed");
+        return 0;
+    }
+
     if (listen(server_sock, 3) < 0)
     {
         perror("Listen failed");
