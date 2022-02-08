@@ -6,7 +6,6 @@
 #include <sstream>
 #include <vector>
 #include <cstring>
-#include <csignal>
 #include <cstdio>
 #include <cstdlib>
 
@@ -44,11 +43,29 @@ void run_server(int server_socket);
  */
 RequestType read_and_get_request_type(int client_socket);
 
+/***
+ * Gets the hostname of the server
+ * @return Hostname of the server
+ */
 string get_hostname();
 
+/***
+ * Gets the CPU model name
+ * @return CPU model name
+ */
 string get_cpu_name();
 
+/***
+ * Gets the system load according to /proc/stat
+ * @return System load
+ */
 int get_load();
+
+/***
+ * Generates an HTTP response with correct headers
+ * @return HTTP response
+ */
+string generate_response(const string &);
 
 /***
  * Sends an HTTP response to the client
@@ -90,7 +107,7 @@ int parse_args(int argc, char** argv)
     if (argc < 2)
         return 0;
 
-    int port = atoi(argv[1]);
+    int port = atoi(argv[1]); // NOLINT(cert-err34-c)
     if (port < 1 || port > 65535)
         return 0;
 
@@ -139,7 +156,7 @@ void run_server(int server_socket)
     int client_socket;
     while (true)
     {
-        client_socket = accept(server_socket, NULL, NULL);
+        client_socket = accept(server_socket, nullptr, nullptr);
         if (client_socket == 0)
         {
             perror("Error while accepting server_socket request");
@@ -186,9 +203,7 @@ string get_cpu_name()
 
     FILE* fp = popen("lscpu | sed -nr '/Model name/ s/.*:\\s*(.*) @ .*/\\1/p' | sed ':a;s/  / /;ta'", "r");
     if (fgets(cpu_name, sizeof cpu_name, fp) == nullptr)
-    {
         return "Can't determine CPU name";
-    };
     pclose(fp);
 
     return cpu_name;
