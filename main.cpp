@@ -6,6 +6,9 @@
 #include <sstream>
 #include <vector>
 #include <cstring>
+#include <csignal>
+#include <cstdio>
+#include <cstdlib>
 
 using namespace std;
 
@@ -17,6 +20,8 @@ enum RequestType
     CPU_NAME,
     LOAD
 };
+
+int parse_args(int argc, char** argv);
 
 /***
  * Creates a socket server
@@ -39,6 +44,11 @@ void run_server(int server_socket);
  */
 RequestType read_and_get_request_type(int client_socket);
 
+/***
+ * Sends an HTTP response to the client
+ * @param client_socket Client socket
+ * @param request_type Type of the HTTP request received from read_and_get_request_type()
+ */
 void send_response(int client_socket, RequestType request_type);
 
 /***
@@ -49,19 +59,36 @@ void send_response(int client_socket, RequestType request_type);
  */
 vector<string> split(const string& input, char delim);
 
-int main()
+int main(int argc, char** argv)
 {
-    const int PORT = 8888;
+    int port = parse_args(argc, argv);
+    if (port <= 0)
+    {
+        cout << "Incorrect port" << endl;
+        exit(EXIT_FAILURE);
+    }
 
-    int socket = create_server(PORT);
+    int socket = create_server(port);
     if (socket == 0)
         exit(EXIT_FAILURE);
 
     cout << "Server listening on port ";
-    cout << PORT << endl;
+    cout << port << endl;
     run_server(socket);
 
     return 0;
+}
+
+int parse_args(int argc, char** argv)
+{
+    if (argc < 2)
+        return 0;
+
+    int port = atoi(argv[1]);
+    if (port < 1 || port > 65535)
+        return 0;
+
+    return port;
 }
 
 int create_server(int port)
@@ -151,12 +178,13 @@ void send_response(int client_socket, RequestType request_type)
     case HOST_NAME:
     {
         cout << "Host name was requested" << endl;
-        char hostname[256] = {0};
+        char hostname[256] = { 0 };
         gethostname(hostname, sizeof hostname);
-        size_t content_length = strlen(hostname);
 
-        string response_buffer = "HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: "
-                + to_string(content_length) + "\r\n\n" + hostname;
+        size_t content_length = strlen(hostname) + 1;
+        string response_buffer = "HTTP/1.1 200 OK\n"
+                                 "Content-Type: text/plain\n"
+                                 "Content-Length: " + to_string(content_length) + "\r\n\n" + hostname + "\n";
 
         strcpy(response, response_buffer.c_str());
         break;
@@ -164,7 +192,18 @@ void send_response(int client_socket, RequestType request_type)
     case CPU_NAME:
     {
         cout << "CPU name was requested" << endl;
-        strcat(response, "\nHTTP/1.1 200 OK\nContent-Type: text/plain\n");
+        char cpu_name[512] = { 0 };
+
+        FILE* fp = popen("lscpu | sed -nr '/Model name/ s/.*:\\s*(.*) @ .*/\\1/p' | sed ':a;s/  / /;ta'", "r");
+        fgets(cpu_name, sizeof cpu_name, fp); // TODO: check if empty
+        pclose(fp);
+
+        size_t content_length = strlen(cpu_name);
+        string response_buffer = "HTTP/1.1 200 OK\n"
+                                 "Content-Type: text/plain\n"
+                                 "Content-Length: " + to_string(content_length) + "\r\n\n" + cpu_name + "\n";
+
+        strcpy(response, response_buffer.c_str());
         break;
     }
     case LOAD:
@@ -176,16 +215,6 @@ void send_response(int client_socket, RequestType request_type)
     }
 
     send(client_socket, response, strlen(response), 0);
-}
-
-string cpu_name()
-{
-
-}
-
-int load()
-{
-
 }
 
 vector<string> split(const string& input, char delim)
