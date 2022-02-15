@@ -201,7 +201,7 @@ string get_cpu_name()
 {
     char cpu_name[512] = { 0 };
 
-    FILE* fp = popen("lscpu | sed -nr '/Model name/ s/.*:\\s*(.*) @ .*/\\1/p' | sed ':a;s/  / /;ta'", "r");
+    FILE* fp = popen("lscpu | sed -nr '/model/ s/.*:\\s*(.*) @ .*/\\1/p' | sed ':a;s/  / /;ta'", "r");
     if (fgets(cpu_name, sizeof cpu_name, fp) == nullptr)
         return "Can't determine CPU name";
     pclose(fp);
@@ -219,7 +219,7 @@ int get_load()
     pclose(fp);
 
     vector<string> cpu_data = split(((string)cpu_load_buffer), ' ');
-    cout << cpu_data[0] << endl;
+
 }
 
 string generate_response(const string& content)
@@ -266,7 +266,9 @@ void send_response(int client_socket, RequestType request_type)
     case LOAD:
     {
         cout << "System load was requested" << endl;
-        strcat(response, "\nHTTP/1.1 200 OK\nContent-Type: text/plain\n");
+        string cpu_load = to_string(get_load());
+        string response_buffer = generate_response(cpu_load);
+        strcpy(response, response_buffer.c_str());
         break;
     }
     }
