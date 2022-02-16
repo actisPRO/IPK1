@@ -1,3 +1,11 @@
+/*
+ * Project #1
+ * Brno University of Technology | Faculty of Information Technology
+ * Course: Computer Communications and Networks	| Summer semester 2022
+ * Author: Denis Karev (xkarev00@stud.fit.vutbr.cz)
+ * This project should not be used for non-educational purposes.
+ */
+
 #include <iostream>
 #include <sys/socket.h>
 #include <netinet/in.h>
