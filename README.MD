@@ -39,4 +39,9 @@ will return the model of the CPU using `lscpu`,
 ```http request
 GET /load
 ```
-will return current CPU load using `awk` for parsing `/proc/stat` file
+will return current CPU load using `awk` for parsing `/proc/stat` file.
+
+For all other requests, the server will return:
+```
+404 Not Found
+```
