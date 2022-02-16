@@ -65,7 +65,7 @@ void get_cpu_time(unsigned long long* idleAll, unsigned long long* nonIdleAll, u
 
 /***
  * Gets the system load according to /proc/stat
- * @param delay Delay between get_cpu_time calls in seconds
+ * @param delay Delay between get_cpu_time calls in milliseconds
  * @return System load
  */
 string get_load(int delay);
@@ -242,7 +242,7 @@ string get_load(int delay)
 {
     unsigned long long prev_idleAll, prev_nonIdleAll, prev_total, curr_idleAll, curr_nonIdleAll, curr_total;
     get_cpu_time(&prev_idleAll, &prev_nonIdleAll, &prev_total);
-    sleep(1);
+    usleep(delay * 1000);
     get_cpu_time(&curr_idleAll, &curr_nonIdleAll, &curr_total);
 
     unsigned long long totald = curr_total - prev_total;
@@ -298,7 +298,7 @@ void send_response(int client_socket, RequestType request_type)
     case LOAD:
     {
         cout << "System load was requested" << endl;
-        string cpu_load = get_load(1);
+        string cpu_load = get_load(500);
         string response_buffer = generate_response(cpu_load);
         strcpy(response, response_buffer.c_str());
         break;
