@@ -74,7 +74,7 @@ string get_load(int delay);
  * Generates an HTTP response with correct headers
  * @return HTTP response
  */
-string generate_response(const string &);
+string generate_response(const string&);
 
 /***
  * Sends an HTTP response to the client
@@ -248,7 +248,7 @@ string get_load(int delay)
     unsigned long long totald = curr_total - prev_total;
     unsigned long long idled = curr_idleAll - prev_idleAll;
 
-    double percentage = (((double) totald - (double) idled) / (double) totald) * 100;
+    double percentage = (((double)totald - (double)idled) / (double)totald) * 100;
     char result[8];
     sprintf(result, "%0.2f%%\n", percentage);
     return result;
