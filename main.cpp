@@ -79,10 +79,13 @@ void get_cpu_time(unsigned long long* idleAll, unsigned long long* nonIdleAll, u
 string get_load(int delay);
 
 /***
- * Generates an HTTP response with correct headers
+ * Generates an HTTP response with the specified content.
+ * @param content Response content, MIME-type should be text/plain
+ * @param status Status code. Can be 200 or 404
+ * @throws std::invalid_argument Throws an exception if the status code is neither 200, nor 404
  * @return HTTP response
  */
-string generate_response(const string&);
+string generate_response(const string& content, int status);
 
 /***
  * Sends an HTTP response to the client
@@ -104,7 +107,7 @@ int main(int argc, char** argv)
     int port = parse_args(argc, argv);
     if (port <= 0)
     {
-        cout << "Incorrect port" << endl;
+        fprintf(stderr, "Incorrect port\n");
         exit(EXIT_FAILURE);
     }
 
@@ -112,8 +115,6 @@ int main(int argc, char** argv)
     if (socket == 0)
         exit(EXIT_FAILURE);
 
-    cout << "Server listening on port ";
-    cout << port << endl;
     run_server(socket);
 
     return 0;
@@ -218,7 +219,7 @@ string get_cpu_name()
 {
     char cpu_name[512] = { 0 };
 
-    FILE* fp = popen("lscpu | sed -nr '/model/ s/.*:\\s*(.*) @ .*/\\1/p' | sed ':a;s/  / /;ta'", "r");
+    FILE* fp = popen("lscpu | sed -nr '/odel/ s/.*:\\s*(.*) @ .*/\\1/p' | sed ':a;s/  / /;ta'", "r");
     if (fgets(cpu_name, sizeof cpu_name, fp) == nullptr)
         return "Can't determine CPU name";
     pclose(fp);
@@ -262,57 +263,63 @@ string get_load(int delay)
     return result;
 }
 
-string generate_response(const string& content)
+string generate_response(const string& content, int status)
 {
     size_t content_length = content.length();
-    string response = "HTTP/1.1 200 OK\n"
-                      "Content-Type: text/plain\n"
-                      "Content-Length: " + to_string(content_length) + "\r\n\n" + content;
+    string response = "";
+    if (status == 200)
+        response += "HTTP/1.1 200 OK\n";
+    else if (status == 404)
+        response += "HTTP/1.1 404 Not Found\n";
+    else
+        throw invalid_argument("Permitted status codes are 200 and 404");
+
+    response += "Content-Type: text/plain\n"
+                "Content-Length: " + to_string(content_length) + "\r\n\r\n" + content;
     return response;
 }
 
 void send_response(int client_socket, RequestType request_type)
 {
     char response[1024] = { 0 };
+    int status;
+    string content;
     switch (request_type)
     {
     case UNKNOWN_REQUEST:
     {
-        strcpy(response, "HTTP/1.1 404 Not found\n");
+        status = 404;
+        content = "404 Not Found\n";
         break;
     }
     case INVALID_RESOURCE:
     {
-        cout << "Incorrect resource was requested" << endl;
-        strcpy(response, "HTTP/1.1 404 Not found\n");
+        status = 404;
+        content = "404 Not Found\n";
         break;
     }
     case HOST_NAME:
     {
-        cout << "Host name was requested" << endl;
-        string hostname = get_hostname();
-        string response_buffer = generate_response(hostname);
-        strcpy(response, response_buffer.c_str());
+        status = 200;
+        content = get_hostname();
         break;
     }
     case CPU_NAME:
     {
-        cout << "CPU name was requested" << endl;
-        string cpu_name = get_cpu_name();
-        string response_buffer = generate_response(cpu_name);
-        strcpy(response, response_buffer.c_str());
+        status = 200;
+        content = get_cpu_name();
         break;
     }
     case LOAD:
     {
-        cout << "System load was requested" << endl;
-        string cpu_load = get_load(500);
-        string response_buffer = generate_response(cpu_load);
-        strcpy(response, response_buffer.c_str());
+        status = 200;
+        content = get_load(500);
         break;
     }
     }
 
+    string response_buffer = generate_response(content, status);
+    strcpy(response, response_buffer.c_str());
     send(client_socket, response, strlen(response), 0);
 }
 
