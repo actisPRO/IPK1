@@ -55,11 +55,14 @@ string get_hostname();
  */
 string get_cpu_name();
 
+unsigned long long* get_cpu_time();
+
 /***
  * Gets the system load according to /proc/stat
+ * @param delay Delay between get_cpu_time calls in seconds
  * @return System load
  */
-int get_load();
+string get_load(int delay);
 
 /***
  * Generates an HTTP response with correct headers
@@ -209,17 +212,40 @@ string get_cpu_name()
     return cpu_name;
 }
 
-int g_OldLoad = 0;
-int get_load()
+void get_cpu_time(unsigned long long* idleAll, unsigned long long* nonIdleAll, unsigned long long* total)
 {
-    char cpu_load_buffer[512] = { 0 };
-    FILE* fp = popen("head -n1 /proc/stat", "r");
-    if (fgets(cpu_load_buffer, sizeof cpu_load_buffer, fp) == nullptr)
-        return -1;
+    char cpu_data[512] = { 0 };
+    const char* awkCommand =
+            "awk '{\n"
+            "    if ($1 == \"cpu\") {\n"
+            "        idleAll = $4 + $5\n"
+            "        nonIdleAll = $1 + $2 + $3 + $6 + $7 + $8\n"
+            "        total = idleAll + nonIdleAll\n"
+            "        printf \"%s %s %s\\n\", idleAll, nonIdleAll, total\n"
+            "    }\n"
+            "}' /proc/stat";
+
+    FILE* fp = popen(awkCommand, "r");
+    fgets(cpu_data, sizeof cpu_data, fp);
     pclose(fp);
 
-    vector<string> cpu_data = split(((string)cpu_load_buffer), ' ');
+    sscanf(cpu_data, "%llu %llu %llu", idleAll, nonIdleAll, total);
+}
 
+string get_load(int delay)
+{
+    unsigned long long prev_idleAll, prev_nonIdleAll, prev_total, curr_idleAll, curr_nonIdleAll, curr_total;
+    get_cpu_time(&prev_idleAll, &prev_nonIdleAll, &prev_total);
+    sleep(1);
+    get_cpu_time(&curr_idleAll, &curr_nonIdleAll, &curr_total);
+
+    unsigned long long totald = curr_total - prev_total;
+    unsigned long long idled = curr_idleAll - prev_idleAll;
+
+    double percentage = (((double) totald - (double) idled) / (double) totald) * 100;
+    char result[8];
+    sprintf(result, "%0.2f%%\n", percentage);
+    return result;
 }
 
 string generate_response(const string& content)
@@ -266,7 +292,7 @@ void send_response(int client_socket, RequestType request_type)
     case LOAD:
     {
         cout << "System load was requested" << endl;
-        string cpu_load = to_string(get_load());
+        string cpu_load = get_load(1);
         string response_buffer = generate_response(cpu_load);
         strcpy(response, response_buffer.c_str());
         break;
