@@ -55,7 +55,13 @@ string get_hostname();
  */
 string get_cpu_name();
 
-unsigned long long* get_cpu_time();
+/***
+ * Gets idle, non-idle and total CPU time by scanning /proc/stat. Requires awk to be installed.
+ * @param idleAll Pointer to a variable, which will contain total idle time for all processors
+ * @param nonIdleAll Pointer to a variable, which will contain total non-idle time for all processors
+ * @param total Pointer to a variable, which will contain total CPU time for all processors.
+ */
+void get_cpu_time(unsigned long long* idleAll, unsigned long long* nonIdleAll, unsigned long long* total);
 
 /***
  * Gets the system load according to /proc/stat
