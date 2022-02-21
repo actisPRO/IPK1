@@ -28,7 +28,13 @@ enum RequestType
     LOAD
 };
 
-int parse_args(int argc, char** argv);
+/***
+ * Parses command line arguments and gets the port from the first one
+ * @param argc Argument count (from main())
+ * @param argv Arguments (from main())
+ * @return Port or 0 if input was invalid
+ */
+int get_port_from_args(int argc, char** argv);
 
 /***
  * Creates a socket server
@@ -104,7 +110,7 @@ vector<string> split(const string& input, char delim);
 
 int main(int argc, char** argv)
 {
-    int port = parse_args(argc, argv);
+    int port = get_port_from_args(argc, argv);
     if (port <= 0)
     {
         fprintf(stderr, "Incorrect port\n");
@@ -120,7 +126,7 @@ int main(int argc, char** argv)
     return 0;
 }
 
-int parse_args(int argc, char** argv)
+int get_port_from_args(int argc, char** argv)
 {
     if (argc < 2)
         return 0;
