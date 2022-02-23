@@ -45,3 +45,7 @@ For all other requests, the server will return:
 ```
 404 Not Found
 ```
+For an incorrect request, the server will return:
+```
+400 Bad Request
+```
