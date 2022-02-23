@@ -87,8 +87,8 @@ string get_load(int delay);
 /***
  * Generates an HTTP response with the specified content.
  * @param content Response content, MIME-type should be text/plain
- * @param status Status code. Can be 200 or 404
- * @throws std::invalid_argument Throws an exception if the status code is neither 200, nor 404
+ * @param status Status code. Can be 200, 400 or 404
+ * @throws std::invalid_argument Throws an exception if the status code is not supported
  * @return HTTP response
  */
 string generate_response(const string& content, int status);
@@ -275,10 +275,12 @@ string generate_response(const string& content, int status)
     string response = "";
     if (status == 200)
         response += "HTTP/1.1 200 OK\n";
+    else if (status == 400)
+        response += "HTTP/1.1 400 Bad Request\n";
     else if (status == 404)
         response += "HTTP/1.1 404 Not Found\n";
     else
-        throw invalid_argument("Permitted status codes are 200 and 404");
+        throw invalid_argument("Permitted status codes are 200, 400 and 404");
 
     response += "Content-Type: text/plain\n"
                 "Content-Length: " + to_string(content_length) + "\r\n\r\n" + content;
@@ -294,8 +296,8 @@ void send_response(int client_socket, RequestType request_type)
     {
     case UNKNOWN_REQUEST:
     {
-        status = 404;
-        content = "404 Not Found\n";
+        status = 400;
+        content = "400 Bad Request\n";
         break;
     }
     case INVALID_RESOURCE:
